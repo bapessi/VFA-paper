@@ -74,7 +74,7 @@ if __name__ == '__main__':
     Ta = res.x[0]
     print(Ta/24)
     print(integrate_ODE(Ta)/24)
-    Ta_list = np.linspace(0,8*24)
-    for Ta in Ta_list:
-        plt.scatter(Ta,integrate_ODE(Ta))
-plt.show()
+    # Ta_list = np.linspace(0,8*24)
+    # for Ta in Ta_list:
+    #     plt.scatter(Ta,integrate_ODE(Ta))
+# plt.show()

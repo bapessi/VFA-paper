@@ -48,7 +48,6 @@ def min_stiff(y0,t_points,Ta,D_f,pr,fr):
     
     return solver.t
 
-
 def ODE_sys_ctrl_fed_batch(t,y,Ta,D_f,pr,fr):
     # DS = D_f(t)
     Sin_glu = 40/v_M['GLU']*fr
