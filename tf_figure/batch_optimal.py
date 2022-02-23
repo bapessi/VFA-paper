@@ -61,7 +61,7 @@ def integrate_ODE(S0,pr):
     GLU0,GLY0 = S0
 
     y0 = [3.5/v_M['BUT'],1.7/v_M["ACE"],0,0.1/v_M['X'],0,GLU0/v_M['GLU'],GLY0/v_M['GLY']]
-    t_eval = np.linspace(0,24*10,100)
+    t_eval = np.linspace(0,24*30,100)
     solver = ode(ODE)
     solver.set_integrator('lsoda')
     solver.set_f_params(pr)
@@ -109,3 +109,4 @@ if __name__ == '__main__':
     res = get_batch_optimal_profit()
     print("concentration best profit: ",res.x)
     print("time best profit: ",integrate_ODE(res.x,pr))
+    print("batch no substrat ", integrate_ODE((0,0),pr))

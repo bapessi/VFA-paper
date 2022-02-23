@@ -1,15 +1,15 @@
-import notebook_functions as nf
-import scipy.optimize as so
+# Calculate optimal Ta for glucose considering constant volume
+from scipy.integrate import ode
 import numpy as np
 import pandas as pd
+import notebook_functions as nf
 import matplotlib.pyplot as plt
-from scipy.integrate import ode
+import scipy.optimize as so
 
-def ODE_twofeeds(t,y,Ta_glu,Ta_gly,pr):
+def ODE(t,y,Ta,pr):
 
-    S0 = 500
+    S0 = 1000
     Sin_glu = S0/v_M['GLU']
-    Sin_gly = S0/v_M['GLY']
     I0 = 500/136 
 
     BUT = y[0]
@@ -28,32 +28,26 @@ def ODE_twofeeds(t,y,Ta_glu,Ta_gly,pr):
     alpha_6 = pr['k_6']*SUC
     alpha_7 = pr['k_7']*GLU/(GLU+pr['k_7']/pr['al_7']*(GLU/pr['KS_7']-1)**2)
 
-    if t < Ta_glu:
-        D_glu = B*2.07298*alpha_7/(Sin_glu)
+    if t < Ta:
+        D = B*2.07298*alpha_7/(Sin_glu)
     else:
-        D_glu = 0 
-    if t < Ta_gly:
-        D_gly = B*alpha_4/Sin_gly
-    else:
-        D_gly = 0
+        D = 0 
 
     dACE = -B*2*alpha_1 
     dBUT = -B*alpha_2 
     dSUC = B*(alpha_1 + alpha_2 - 4.08788*alpha_6) 
-    dGLY = -B*alpha_4 + D_gly*Sin_gly 
-    dGLU = -B*2.07298*alpha_7 + D_glu*Sin_glu 
+    dGLY = -B*alpha_4 
+    dGLU = -B*2.07298*alpha_7 + D*Sin_glu 
     dGAP = B*(alpha_4 -4.08788*alpha_5 + alpha_3) 
     dB = B*(alpha_5 + alpha_7 + alpha_6) 
 
     dt = [dBUT,dACE,dSUC,dB,dGAP,dGLU,dGLY]
     return dt
 
-
-def integrate_ODE(p_control,pr):
-    Ta_glu,Ta_gly = p_control
-    solver = ode(ODE_twofeeds)
+def integrate_ODE(Ta,pr):
+    solver = ode(ODE)
     solver.set_integrator('lsoda')
-    solver.set_f_params(Ta_glu,Ta_gly,pr)
+    solver.set_f_params(Ta,pr)
     solver.set_initial_value(y0, t_eval[0])
     tf = t_eval[-1]
     dt = 1/60
@@ -62,24 +56,25 @@ def integrate_ODE(p_control,pr):
         res = solver.integrate(solver.t+dt)
         if res[variables.index('BUT')] <= 0.069/88 and res[variables.index('GLU')] <= 0.117/180 and res[variables.index('GLY')] <= 0.1027/92:
             break
-
     return solver.t 
 
-file_params = 'Parameters_inhibition.xlsx'
-# pr = nf.get_init_params(file_params)
 v_M = {'BUT': 88,'ACE': 59 ,'X': 186, 'GAP':170, 'SUC': 118, 'GLU': 180, 'GLY': 92}
 variables = ['BUT', 'ACE', 'SUC', 'X', 'GAP', 'GLU', 'GLY']
-bounds = [(0,20*24),(0,20*24)]
-GLY0 = 0.071*v_M['GLY']
+bounds = [(0,20*24)]
+GLY0 = 0
 GLU0 = 0.051*v_M['GLU']
 y0 = [3.5/v_M['BUT'],1.7/v_M["ACE"],0,0.1/v_M['X'],0,GLU0/v_M['GLU'],GLY0/v_M['GLY']]
+t_eval = np.linspace(0,10*24,100)
 
 if __name__ == '__main__':
-
-    t_eval = np.linspace(0,30*24,100)
-    res = so.differential_evolution(integrate_ODE,bounds=bounds, workers=-1)
-    Ta_glu = res.x[0]
-    Ta_gly = res.x[1]
-    print('ta_glu = ',Ta_glu/24)
-    print('ta_gly = ',Ta_gly/24)
-    print('tf = ', integrate_ODE(res.x)/24)
+    file_params = 'Parameters_inhibition.xlsx'
+    pr = nf.get_init_params(file_params)
+   
+    res = so.differential_evolution(integrate_ODE,bounds=bounds, workers=-1,args=[pr])
+    Ta = res.x[0]
+    print(Ta/24)
+    print(integrate_ODE(Ta)/24)
+    # Ta_list = np.linspace(0,8*24)
+    # for Ta in Ta_list:
+    #     plt.scatter(Ta,integrate_ODE(Ta))
+# plt.show()

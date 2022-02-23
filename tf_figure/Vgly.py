@@ -6,10 +6,10 @@ import notebook_functions as nf
 import matplotlib.pyplot as plt
 import scipy.optimize as so
 
-def ODE(t,y,Ta):
+def ODE(t,y,Ta,pr):
 
     S0 = 1000
-    Sin_glu = S0/v_M['GLU']
+    Sin_gly = S0/v_M['GLY']
     I0 = 500/136 
 
     BUT = y[0]
@@ -29,25 +29,25 @@ def ODE(t,y,Ta):
     alpha_7 = pr['k_7']*GLU/(GLU+pr['k_7']/pr['al_7']*(GLU/pr['KS_7']-1)**2)
 
     if t < Ta:
-        D = B*2.07298*alpha_7/(Sin_glu)
+        D = B*alpha_4/Sin_gly
     else:
         D = 0 
 
     dACE = -B*2*alpha_1 
     dBUT = -B*alpha_2 
     dSUC = B*(alpha_1 + alpha_2 - 4.08788*alpha_6) 
-    dGLY = -B*alpha_4 
-    dGLU = -B*2.07298*alpha_7 + D*Sin_glu 
+    dGLY = -B*alpha_4 + D*Sin_gly 
+    dGLU = -B*2.07298*alpha_7 
     dGAP = B*(alpha_4 -4.08788*alpha_5 + alpha_3) 
     dB = B*(alpha_5 + alpha_7 + alpha_6) 
 
     dt = [dBUT,dACE,dSUC,dB,dGAP,dGLU,dGLY]
     return dt
 
-def integrate_ODE(Ta):
+def integrate_ODE(Ta,pr):
     solver = ode(ODE)
     solver.set_integrator('lsoda')
-    solver.set_f_params(Ta)
+    solver.set_f_params(Ta,pr)
     solver.set_initial_value(y0, t_eval[0])
     tf = t_eval[-1]
     dt = 1/60
@@ -58,23 +58,16 @@ def integrate_ODE(Ta):
             break
     return solver.t 
 
+v_M = {'BUT': 88,'ACE': 59 ,'X': 186, 'GAP':170, 'SUC': 118, 'GLU': 180, 'GLY': 92}
+variables = ['BUT', 'ACE', 'SUC', 'X', 'GAP', 'GLU', 'GLY']
+bounds = [(0,10*24)]
+GLY0 = 0.071*v_M['GLY'] 
+GLU0 = 0
+y0 = [3.5/v_M['BUT'],1.7/v_M["ACE"],0,0.1/v_M['X'],0,GLU0/v_M['GLU'],GLY0/v_M['GLY']]
+t_eval = np.linspace(0,20*24,100)
+
 if __name__ == '__main__':
     file_params = 'Parameters_inhibition.xlsx'
     pr = nf.get_init_params(file_params)
-    v_M = {'BUT': 88,'ACE': 59 ,'X': 186, 'GAP':170, 'SUC': 118, 'GLU': 180, 'GLY': 92}
-    variables = ['BUT', 'ACE', 'SUC', 'X', 'GAP', 'GLU', 'GLY']
-
-    bounds = [(0,20*24)]
-    GLY0 = 0
-    GLU0 = 0.051*v_M['GLU']
-    y0 = [3.5/v_M['BUT'],1.7/v_M["ACE"],0,0.1/v_M['X'],0,GLU0/v_M['GLU'],GLY0/v_M['GLY']]
-    t_eval = np.linspace(0,10*24,100)
-    
     res = so.differential_evolution(integrate_ODE,bounds=bounds, workers=-1)
     Ta = res.x[0]
-    print(Ta/24)
-    print(integrate_ODE(Ta)/24)
-    # Ta_list = np.linspace(0,8*24)
-    # for Ta in Ta_list:
-    #     plt.scatter(Ta,integrate_ODE(Ta))
-# plt.show()
