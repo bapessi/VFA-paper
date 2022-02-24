@@ -40,26 +40,45 @@ def get_flux_zero():
 
     return dt
 
-dt = get_flux_zero()
-print('dt ',dt) 
-print('dt normalized', dt/max(dt))
-print('Face/Fbut ', dt[1]/dt[0])
 
 # filename = 'chloroplast.xlsx'
-filename = 'glyox.xlsx'
+filename = 'gly2.xlsx'
+# filename = 'stonks.xlsx'
+# filename = 'stonks_lite.xlsx'
 df = pd.read_excel(filename,index_col=0)
+rev = df.loc['reversible',:].values
+df = df.drop('reversible')
 Aeq = df.to_numpy(na_value=0)
-Aeq = Aeq.T
-beq= np.zeros(Aeq.shape[0]) #  
+# Aeq = Aeq.T # if the rows are the reactions 
+beq = np.zeros(Aeq.shape[0]) #  
 c = np.zeros(Aeq.shape[1])
-c[-1] = -1
+def get_bounds(rev):
+    bounds = []
+    for r in rev:
+        if r == 1:
+            bounds.append((None,None))
+        elif r==0:
+            bounds.append((0,None))
+        else:
+            print("error with reversible array")
+    return bounds
 
-# print('Aeq ',Aeq)
-# print('beq ', beq)
-# print('c ', c)
-feed = [(0,1),(0,1e3)]
-bounds = feed + [(None,None)]*(Aeq.shape[1]-len(feed))
+def get_stoic_lite(df):
+    filename = 'chart_metabolites.xlsx'
+    list_metabolites = pd.read_excel(filename).values
 
-res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds)
-print(res)
-pd.Series(res.x).to_excel('res.xlsx')
+    return df 
+bounds = get_bounds(rev)
+feed_list = ['R175 ','R181 ','R182 ','R179 ','R178 '] #light,GLU,GLY,ACE,BUT
+for reaction,i in zip(df.columns,range(len(df.columns))):
+    if reaction in feed_list:
+        bounds[i] = (0,1e3)
+        print(reaction)
+    if reaction == 'R166 ':
+        print(reaction)
+        c[i] = -1
+# res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds,method="interior-point",options={'tol':1e-10,'maxiter':10000})
+# print(res)
+# print("max flux ", max(res.x))
+# print("min flux", min(res.x))
+# pd.Series(res.x,index=df.columns).to_excel('resbiomass3.xlsx')
