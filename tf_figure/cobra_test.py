@@ -41,17 +41,17 @@ def get_flux_zero():
     return dt
 
 
-# filename = 'chloroplast.xlsx'
-filename = 'gly2.xlsx'
-# filename = 'stonks.xlsx'
-# filename = 'stonks_lite.xlsx'
-df = pd.read_excel(filename,index_col=0)
-rev = df.loc['reversible',:].values
-df = df.drop('reversible')
-Aeq = df.to_numpy(na_value=0)
-# Aeq = Aeq.T # if the rows are the reactions 
-beq = np.zeros(Aeq.shape[0]) #  
-c = np.zeros(Aeq.shape[1])
+
+def get_matrix(filename):
+    df = pd.read_excel(filename,index_col=0)
+    rev = df.loc['reversible',:].values
+    df = df.drop('reversible')
+    Aeq = df.to_numpy(na_value=0)
+    beq = np.zeros(Aeq.shape[0]) #  
+    c = np.zeros(Aeq.shape[1])
+
+    return df,Aeq,beq,c,rev
+
 def get_bounds(rev):
     bounds = []
     for r in rev:
@@ -63,22 +63,25 @@ def get_bounds(rev):
             print("error with reversible array")
     return bounds
 
-def get_stoic_lite(df):
-    filename = 'chart_metabolites.xlsx'
-    list_metabolites = pd.read_excel(filename).values
+def correct_feed(feed_list,bounds,c):
+    for reaction,i in zip(df.columns,range(len(df.columns))):
+        if reaction in feed_list:
+            bounds[i] = (0,1e3)
+            print(reaction)
+        if reaction == 'R166 ':
+            print(reaction)
+            c[i] = -1
+    return bounds,c
 
-    return df 
-bounds = get_bounds(rev)
+
+filename = 'stonks.xlsx'
+fileoutput = 'resbiomass.xlsx'
 feed_list = ['R175 ','R181 ','R182 ','R179 ','R178 '] #light,GLU,GLY,ACE,BUT
-for reaction,i in zip(df.columns,range(len(df.columns))):
-    if reaction in feed_list:
-        bounds[i] = (0,1e3)
-        print(reaction)
-    if reaction == 'R166 ':
-        print(reaction)
-        c[i] = -1
-# res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds,method="interior-point",options={'tol':1e-10,'maxiter':10000})
-# print(res)
-# print("max flux ", max(res.x))
-# print("min flux", min(res.x))
-# pd.Series(res.x,index=df.columns).to_excel('resbiomass3.xlsx')
+df,Aeq,beq,c,rev = get_matrix(filename)
+bounds = get_bounds(rev)
+bounds,c = correct_feed(feed_list,bounds,c)
+res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds,method="interior-point",options={'tol':1e-10,'maxiter':10000})
+print(res)
+print("max flux ", max(res.x))
+print("min flux", min(res.x))
+pd.Series(res.x,index=df.columns).to_excel(fileoutput)
