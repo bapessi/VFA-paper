@@ -42,13 +42,21 @@ def get_stoich_corrected(metabolites,stoich,df):
     stoich = stoich.append(reac_rev)
     return stoich
 
-def save_stoich_excel(filename):
+def correct_column_names(stoich):
+
+    for r in stoich.columns:
+        if r[-1] ==' ':
+           stoich =  stoich.rename(columns={r:r[:-1]})
+    return stoich
+
+def save_sto_corrected(filename):
 
     file_input = filename +'.xlsx'
     file_output = filename +'_corrected.xlsx'
     df = pd.read_excel(file_input,index_col=0,header=None)
     metabolites,stoich = get_metabolites(df)
     stoich = get_stoich_corrected(metabolites,stoich,df)
+    stoich = correct_column_names(stoich)
     stoich.to_excel(file_output)
     print('---')
     print('excel saved as ' + filename + '_corrected.xlsx')

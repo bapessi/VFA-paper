@@ -40,17 +40,16 @@ def get_flux_zero():
 
     return dt
 
-
-
 def get_matrix(filename):
     df = pd.read_excel(filename,index_col=0)
     rev = df.loc['reversible',:].values
     df = df.drop('reversible')
+    feed_list = determine_feed_list(df)
     Aeq = df.to_numpy(na_value=0)
     beq = np.zeros(Aeq.shape[0]) #  
     c = np.zeros(Aeq.shape[1])
 
-    return df,Aeq,beq,c,rev
+    return df,Aeq,beq,c,rev,feed_list
 
 def get_bounds(rev):
     bounds = []
@@ -63,25 +62,55 @@ def get_bounds(rev):
             print("error with reversible array")
     return bounds
 
-def correct_feed(feed_list,bounds,c):
+def correct_feed(feed_list,bounds,c,r_max):
     for reaction,i in zip(df.columns,range(len(df.columns))):
         if reaction in feed_list:
+            print('Feed reaction: ',reaction)
             bounds[i] = (0,1e3)
-            print(reaction)
-        if reaction == 'R166 ':
-            print(reaction)
+        if reaction == r_max:
+            print('max reaction: ',reaction)
             c[i] = -1
     return bounds,c
 
+def determine_feed_list(df):
+    feed_list = []
+    for r in df.columns:
+        if not np.any(df.loc[:,r].values[df.loc[:,r].values < 0]):
+            feed_list.append(r) 
+    return feed_list
 
-filename = 'stonks.xlsx'
-fileoutput = 'resbiomass.xlsx'
-feed_list = ['R175 ','R181 ','R182 ','R179 ','R178 '] #light,GLU,GLY,ACE,BUT
-df,Aeq,beq,c,rev = get_matrix(filename)
-bounds = get_bounds(rev)
-bounds,c = correct_feed(feed_list,bounds,c)
-res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds,method="interior-point",options={'tol':1e-10,'maxiter':10000})
-print(res)
-print("max flux ", max(res.x))
-print("min flux", min(res.x))
-pd.Series(res.x,index=df.columns).to_excel(fileoutput)
+if __name__ == '__main__':
+    filename = 'glycolysis' + '_feasible' 
+    filename = 'TCC' + '_feasible' 
+    filename = 'PPP' + '_feasible' 
+    filename = 'AA100' + '_feasible' 
+    r_max = 'R110' 
+    filename = 'nucleic_acids' + '_feasible' 
+    r_max = 'R156' 
+    filename = 'chlorophyll' + '_feasible' 
+    r_max = 'R163' 
+    filename = 'THF' + '_feasible' 
+    r_max = 'R125' 
+    filename = 'bio_noAA' + '_feasible' 
+    r_max = 'R166'
+    filename = 'lipid_synthesis' + '_feasible' 
+    r_max = 'R139'
+    filename = 'stoich_noexchange' + '_feasible' 
+    r_max = 'R166'
+    filename = 'main_biomass' + '_feasible' 
+    r_max = 'R166'
+    # filename = 'lipid_synthesis' + '_feasible' 
+    # filename = 'AA' + '_feasible' 
+    # r_max = 'R110' 
+
+    fileinput = filename + '.xlsx' 
+    fileoutput = 'FBA_' + filename + '.xlsx'
+    df,Aeq,beq,c,rev,feed_list = get_matrix(fileinput)
+    bounds = get_bounds(rev)
+    bounds,c = correct_feed(feed_list,bounds,c,r_max)
+    res = linprog(c,A_eq=Aeq,b_eq=beq,bounds=bounds,method="interior-point",options={'tol':1e-10,'maxiter':10000})
+    print(res)
+    print("max flux ", max(res.x))
+    print("min flux", min(res.x))
+    pd.Series(res.x,index=df.columns).to_excel(fileoutput)
+    print('feed list', feed_list)

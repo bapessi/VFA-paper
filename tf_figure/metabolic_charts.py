@@ -62,3 +62,4 @@ t_eval = np.linspace(0,10*24,100)
 if __name__ == '__main__':
     file_params = 'Parameters_inhibition.xlsx'
     pr = nf.get_init_params(file_params)
+
